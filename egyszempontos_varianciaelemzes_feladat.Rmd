@@ -1,0 +1,64 @@
+---
+title: "Egyszempontos varianciaelemzés"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Drog hatása az absztrakt gondolkodásra.
+
+> Az absztrakt gondolkodás mérésére kifejlesztett tesztet ecstacy- és kannabisz-használók töltötték ki, és harmadik csoportként azok, akik nem fogyasztanak kábítószert. Mindegyik csoportban 28 résztvevő volt, és tudjuk, hogy az ecstacy-fogyasztók legnagyobb része egyben kannabisz-használó is. A teszten a magasabb pontszám jobb teljesítményt jelent. Vizsgáljuk meg, hogy a kábítószer-használat hatással van-e az absztrakt gondolkodásra.  
+Forrás: @Gudgeon1994, 367. o. Excercises 11.33
+
+## Beolvasás
+
+```{r}
+library(rio)
+drog <- import(file = "adatok/droghasznalat.sav") # beolvasás
+dim(drog)
+names(drog)
+class(drog$group)
+class(drog$dv)
+```
+
+## Előkészítés
+
+```{r}
+# numerikusból faktor átalakítás
+drog$group <- factor(drog$group)
+levels(drog$group) <- c("ecstacy", "kontroll", "kannabisz")
+```
+
+
+
+# Irodalom
+

@@ -1,2 +1,3 @@
-# stat1_kurzus
-Statisztikai 1.
+# Pszichológiai statisztika 1. 
+
+Példák statisztikai próbák végrehajtására

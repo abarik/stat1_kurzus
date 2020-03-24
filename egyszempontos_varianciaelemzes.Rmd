@@ -1,0 +1,142 @@
+---
+title: "Egyszempontos varianciaelemzés"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Arcok kitakarása és az emlékezet.
+
+> Bizonyos bűncselekmények esetén egyre gyakoribb az áldozatok arcának kitakarása a tanúvallomások során. A televíziós közvetítések elszaporodása miatt, ez egyre nagyobb jelentőségű. Megfigyelték, hogy a kitakarás módja hatással lehet az esküdtek véleményére, nevezetesen, hogy mennyire gondolják hitelesnek a tanúvallomást. Egy vizsgálatban 4 különböző módszerrel fedtek el arcokat (nem volt elfedés, szürke folttal fedték el az arcot részlegesen, kipixelezték az arcot, negatív képet mutattak). A függő változó a vallomásokból származó tények százalékos aránya volt, amelyre a résztvevők helyesen emlékeztek. A hipotézis szerint az arc elfedése negatív hatással is lehet az emlékezetre, vagyis a résztvevők emlékezetét az áldozatok tanúvallomására befolyásolta a bemutatás feltétele: míg az arc negatív képének bemutatása nem csökkentette a emlékezetet a fedetlen állapothoz képest, a szürke folttal való maszkolás és a pixelezés azonban egyaránt rontotta az emlékezetet. Az adatokat a `kitakaras_emlekezet.sav` állományban találjuk. Vizsgáljuk meg, hogy a bemutatás (az arcok elfedésének módja) hatással van az emlékezetre (tények százalékos aránya, amelyre helyesen emlékeztek).
+Forrás: @Brace2016, 198-199. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/kitakaras_emlekezet.sav")
+dim(d)
+names(d)
+class(d$prescond)
+class(d$memory)
+```
+
+## Előkészítés
+
+```{r}
+# numerikusból faktor átalakítás
+d$prescond <- factor(d$prescond)
+levels(d$prescond) <- c("fedetlen", "szürke folt", "pixeles", "negatív")
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describeBy(x = d$memory, group = d$prescond, mat=T, digits = 2)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+p1 <- ggplot(data=d, aes(x=prescond, y=memory)) + geom_boxplot()
+p2 <- ggplot(data=d, aes(x=prescond, y=memory)) + geom_boxplot() + geom_jitter(height = 0, width = 0.2)
+p3 <- ggplot(data=d, aes(x=prescond, y=memory)) + 
+        stat_summary(fun.y=mean, geom="bar", fill="white", colour="black") + 
+        stat_summary(fun.data=mean_cl_normal, geom="pointrange")
+grid.arrange(p1, p2, p3, nrow=1)
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+library(DescTools)
+LeveneTest(memory~prescond, data = d, center = "mean") # Levene-próba
+LeveneTest(memory~prescond, data = d, center = "median") # Brown-Forsythe-próba a varianciákra
+by(data = d$memory, INDICES = d$prescond, shapiro.test)  # normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+d.aov <- aov(memory~prescond, data = d) # egyszempontos varianciaelemzés
+summary(d.aov)
+
+library(DescTools)
+EtaSq(d.aov)   # a hatás nagysága
+
+# utóvizsgálat
+pairwise.t.test(x = d$memory, g = d$prescond, p.adjust.method = "bonf", pool.sd = T) # egyenlő varianciák
+pairwise.t.test(x = d$memory, g = d$prescond, p.adjust.method = "bonf", pool.sd = F) # nem egyenlő varianciák
+
+# normalitásvizsgálat a reziduumra
+aov.residuals <- residuals(object = d.aov )
+shapiro.test(x = aov.residuals )
+```
+ 
+
+## Szöveges értékelés
+
+Az egyszempontos varianciaelemzés eredménye alapján azt mondhatjuk, elegendő bizonyítékunk van arra, hogy a résztvevők emlékezetét a tanúvallomások tényeire szignifikánsan meghatározza a bemutatás feltétele ($F(3,36)=15,31;p<0,001, \eta^2=0,56$). Az utóelemzés minden pár esetében szignifikáns különbséget mutatott ki ($p \leq 0,001$), kivéve fedetlen-negatív pár ($p=1$) és a pixeles-szürke folt pár ($p=1$) esetében.
+
+## Alternatívák
+
+```{r}
+oneway.test(memory~prescond, data = d)  # Welch-féle egyszempontos varianciaelemzés
+
+library(onewaytests)  # Brown-Forsythe-próba a várható értékekre
+bf.test(memory~prescond, data = d)
+
+
+# egyszempontos varianciaelemzés a onewaytests csomaggal, utóelemzéssel
+d.aov.2 <- aov.test(memory~prescond, data = d)
+paircomp(d.aov.2, adjust.method = "bonferroni")
+
+# normalitásvizsgálat onewaytests csomaggal
+nor.test(memory~prescond, data = d)
+
+
+
+# Kruskal-Wallis-próba a onewaytests csomaggal, utóelemzéssel
+d.aov.2 <- kw.test(memory~prescond, data = d)
+paircomp(d.aov.2)
+```
+
+
+# Irodalom
+
