@@ -1,0 +1,237 @@
+---
+title: "Kétszempontos varianciaelemzés"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=F,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. A vonzerő és a nem hatása az ítéletekre
+
+> Egy kísérletben a résztvevőket arra kérték, hogy jelöljék meg, hány év börtönbüntetést szabnának ki vádiratok alapján. A 60 résztvevőből 20 egyszerűen megkapta az írásbeli szöveget, nem volt csatolva fotó a vádlottról, 20 résztvevő azonban a szöveg mellé egy vonzó vádlottól származó fotót kapott, az utolsó 20 fős csoport pedig egy nem vonzó vádlottól származót. A fotón férfi vagy nő vádlottak jelentek meg, és a résztvevők közé is egyarán válogattak férfiakat és nőket is.  
+A kísérleti terv tehát 3x2-es elrendezésű, személyek közötti (független) kétszempontos varianciaelemzésnek felel meg. Az első személyek közötti tényező (faktor) az *ismeret a vonzerőről* (vonzerő) volt, amelynek három lehetséges szintje: nincs kép az vádlottról (tehát nem adtak információt a vonzerőről, ez a kontrollcsoport), kép vonzó vádlottról, és kép nem vonzó vádlottról. A másik személyek közötti tényező a *nem egyezése* faktor, amelynek két lehetséges értéke az azonos vagy eltérő nem lehet, attól függgően, hogy a résztvevő neme azonos vagy ellenkező volt az vádlott nemétől. A vádlott nemét a vádiratban jelezték azon résztvevőknek, akik nem kaptak fényképet. A függő változó a résztvevő által kiszabott büntetés, a vádlottnak hány évet kell börtönben töltenie, minimum 3-tól 25-ig. A tesztelt hipotézis az volt, hogy a nem vonzó vádlottakat szigorúbban ítélik meg a résztvevők, illetve az ítélet a résztvevő nemétől is függhet. 
+
+Forrás: @Brace2016, 213. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/vallomasok.sav")
+dim(d)
+names(d)
+
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+# faktorrá alakítás
+d$sexdiff <- factor(d$sexdiff)
+levels(d$sexdiff) <- c("ugyanaz", "eltérő")
+d$attract <- factor(d$attract)
+levels(d$attract) <- c("vonzó", "nem vonzó", "nincs kép")
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+options(max.print=150)
+psych::describeBy(x = d$sentence, group = d[,c("sexdiff", "attract")], 
+                  mat=T, digits = 2)
+
+
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(data=d, aes(x=sexdiff, y=sentence, col=attract)) + 
+  geom_boxplot() + theme_bw() + theme(legend.position = "top")
+
+p2 <- ggplot(data=d, aes(x=attract, y=sentence, col=sexdiff)) + 
+  geom_boxplot() + theme_bw() + theme(legend.position = "top")
+
+p3 <- ggplot(data=d, 
+             aes(x=sexdiff, y=sentence, col=attract)) + 
+  geom_boxplot() + 
+  geom_point(position = position_jitterdodge()) + 
+  theme_bw() + 
+  theme(legend.position = "right") + 
+  labs(x="a két nem", y="megítélt börtönévek") + 
+  scale_color_discrete(name="vonzalom")
+
+grid.arrange(p1, p2, p3, layout_matrix = matrix(rep(1:3, times=c(3,3,4)), nrow=1))
+```
+
+
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(data=d, 
+             aes(x=attract, y=sentence, fill=sexdiff)) + 
+        stat_summary(fun=mean, geom="bar", position="dodge", colour="black") + 
+        stat_summary(fun.data=mean_cl_normal, geom="errorbar", 
+                     position=position_dodge(width=0.90), width=0.2) +
+        theme_bw() + 
+        theme(legend.position="top")  
+
+p2 <- ggplot(data=d, 
+             aes(x=attract, y=sentence)) + 
+        stat_summary(fun=mean, geom="bar", fill="#95b0ff", colour="black") + 
+        stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=0.2) +
+        theme_bw() + 
+        facet_wrap(~sexdiff, nrow = 1)
+
+pd <- position_dodge(width = 0.2)
+p3 <- ggplot(data=d, 
+       aes(x=attract, y=sentence, group=sexdiff)) + 
+  stat_summary(fun.data=mean_cl_normal,
+               geom="line", 
+               aes(linetype=sexdiff),
+               position = pd) +
+  stat_summary(fun.data=mean_cl_normal, 
+               geom="errorbar", 
+               width=0.1, 
+               position = pd) +
+  stat_summary(fun=mean, geom="point", 
+               size=3, 
+               fill="white", 
+               shape=21, 
+               position = pd) +
+  theme_bw() + 
+  theme(legend.justification=c(1,0),legend.position=c(1,0)) +
+  scale_linetype_discrete(name="a két nem") + 
+  labs(x="vonzalom", y="megítélt börtönévek") 
+
+
+grid.arrange(p1, p2, p3, nrow=1)
+```
+
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+d.lm <- lm(sentence~sexdiff*attract, data=d)
+shapiro.test(residuals(d.lm))  # normalitás a reziduálisra
+
+aggregate(d$sentence, d[,c("sexdiff", "attract")], function(x) shapiro.test(x)$p.value)
+
+library(DescTools)
+LeveneTest(sentence~sexdiff*attract, data=d, center="mean")
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+# három módszer létezik: Type I, Type II, Type III
+# kiegyensúlyozott esetben (azonos elemszámú csoportok esetén) azonos eredményt adnak
+# http://goanna.cs.rmit.edu.au/~fscholer/anova.php
+
+# Type I. - ne használjuk kiegyensúlyozatlan elrendezés estén
+d.aov <- aov(sentence~sexdiff*attract, data=d)
+summary(d.aov)
+
+# hatásmértékek
+library(sjstats)
+eta_sq(model = d.aov)
+eta_sq(model = d.aov, partial = T)
+omega_sq(model = d.aov)    
+
+# Type II - feltételezett interakció nélküli eseteben használjuk 
+d.lm <- lm(sentence~sexdiff*attract, data=d)
+car::Anova(d.lm, type="II")  
+
+# hatásmérték
+eta_sq(model = car::Anova(d.lm, type="II"))
+eta_sq(model = car::Anova(d.lm, type="II"), partial = T)
+omega_sq(model = car::Anova(d.lm, type="II"))    
+
+# Type III - feltételezett interakció esetén használjuk 
+d.lm <- lm(sentence~sexdiff*attract, data=d, 
+           contrasts=list(sexdiff=contr.sum, 
+                          attract=contr.sum))
+car::Anova(d.lm, type="III")
+
+# hatásmértékek
+eta_sq(model = car::Anova(d.lm, type="III"))
+eta_sq(model = car::Anova(d.lm, type="III"), partial = T)
+omega_sq(model = car::Anova(d.lm, type="III"))    
+
+# minden egyben
+anova_stats(car::Anova(d.lm, type="III"))
+
+# utóvizsgálat
+pairwise.t.test(x = d$sentence, g = d$attract, p.adjust.method = "bonf")
+```
+ 
+
+## Szöveges értékelés
+
+Kétszempontos (független, személyek közötti) varianciaelemzést hajtottunk végre a börtönévek kiszabásával kapcsolatban. A nem (vagyis a résztvevő nemének egyezése vagy különbözősége az alperes nemével) esetében nem tudtunk kimutatni szignifikáns hatást a börtönbüntetés súlyosságára nézve ($F(1,54)=1,58; p=0,214; \eta^2=0,009$). Azonban a vádlott vonzóságára vonatkozó információnak szignifikáns főhatása van a kiszabott büntetésre ($F(2,54)=55,46;p<0,001; \eta^2=0,663$). A két faktor között nincs interakció ($F(2,54)=0,40;p=0,674;\eta^2=0,005$). A szignifikáns főhatást mutató vonzalom faktorra utóvizsgálatot hajtottunk végre, páronkénti összehasonlítást Bonferroni korrekcióval. Szignifikáns eltérést találtunk a mindhárom pár esetében ($p<0,001$). A legsúlyosabb büntetésre tehát a kép nélküli esetben számíthatunk, a legenyhébbre pedig a vonzó fénykép esetén. 
+
+
+
+## Alternatívák
+
+```{r out.width='40%'}
+library(jmv)
+levels(d$sexdiff) <- c("ugyanaz", "eltero")
+levels(d$attract) <- c("vonzo", "nem vonzo", "nincs kep")
+jmv::ANOVA(
+    formula = sentence ~ sexdiff + attract + sexdiff:attract,
+    data = d,
+    effectSize = c("eta", "partEta", "omega"),
+    homo = TRUE,
+    norm = TRUE,
+    qq = TRUE,
+    postHoc = ~ attract,
+    postHocCorr = c("tukey", "scheffe", "bonf", "holm"),
+    postHocES = "d",
+    emMeans = ~ attract + sexdiff,
+    emmTables = TRUE)
+```
+
+
+# Irodalom
+

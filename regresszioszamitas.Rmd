@@ -1,0 +1,181 @@
+---
+title: "Regressziószámítás"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. CFF és az életkor.
+
+> A kritikus villogás-fúziós frekvencia (CFF) egy vizuális képesség-mutató, amelyet a kép villódzási frekvenciájával, azaz annak legalacsonyabb határával társítunk, amelyen a fény már állandó megvilágítási forrásként észlelhető. Vizsgáljuk meg, hogy függ-e a CFF az életkortól, és ha igen, akkor milyen függvényszerű, lineáris kapcsolat van a két változó között. Adjuk meg a  20, 30, 40, és 50 éves korhoz tartozó CFF értékeket.
+
+Forrás: @Brace2016, 152. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/cff.sav")
+dim(d)
+names(d)
+
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+psych::describe(d)
+cor(d$age, d$cff)    # Pearson-féle korrelációs együttható
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+p1 <- ggplot(data=d, aes(x=age, y=cff)) + 
+  geom_point() + theme_bw()
+
+p2 <- ggplot(data=d, aes(x=age, y=cff)) + 
+  geom_point(shape=21, fill="lightblue", col="grey20", size=2) + geom_smooth(method = "lm", se = F)  + theme_bw()
+
+p3 <- ggplot(data=d, aes(x=age, y=cff)) + 
+  geom_point() + geom_smooth()  + theme_bw()
+
+grid.arrange(p1, p2, p3, nrow=1)
+```
+
+## Próba végrehajtása
+
+```{r out.width='40%'}
+# egyszerű lineáris regresszió
+d.lm <- lm(cff~age, data=d)
+d.lm
+summary(d.lm)
+
+residuals(object = d.lm)  # reziduum (maradék, a hibatag vagy véletlen hiba becslése az adatokból)
+fitted(object = d.lm)     # jósolt értékek: Y'
+predict(object = d.lm)    # jósolt értékek: Y'
+
+predict(object = d.lm, newdata = data.frame(age=c(20, 30, 40, 50))) # jósolt érték új adatpontokhoz
+
+confint(object = d.lm)    # konfidencia-intervallumok a-ra és b-re
+# Ha a fenti két intervallumba eső paraméterpár összes lehetséges értékpárjára felrajzoljuk a regressziós egyenest, akkor kirajzolódik a konfidencia sáv
+# A konfidencia sáv tehát a valódi egyenes minden pontját 95%-os megbízhatósággal tartalmazza.
+ # konfidencia sáv meghatározása
+konfidencia.sav <- predict(object = d.lm, interval = "confidence")
+
+# Ha egy adott X értékhez szeretnénk becslést adni Y-ra, akkor a predikciós sávot használjuk. Most egyedi, új lehetséges megfigyelést becslünk. Azaz a predikciós sáv olyan intervallumot jelent, az új megfigyelést 95%-os valószínűséggel tartalmazza.
+# predikciós sáv meghatározása
+predikcios.sav <- predict(object = d.lm, interval = "prediction") 
+colnames(predikcios.sav) <- paste0(colnames(predikcios.sav), ".p")
+d.2 <- cbind(d, konfidencia.sav, predikcios.sav[,2:3])
+ggplot(data=d.2, aes(x=age, y=cff)) + 
+  geom_point(shape=21, fill="lightblue", col="grey20", size=2) + 
+  geom_smooth(method = "lm", se = T)  + theme_bw() + 
+  geom_line(aes(x=age, y=lwr, group=1), linetype=2) + 
+  geom_line(aes(x=age, y=upr, group=1), linetype=2) + 
+  geom_line(aes(x=age, y=lwr.p, group=1), linetype=3) + 
+  geom_line(aes(x=age, y=upr.p, group=1), linetype=3) 
+```
+
+
+## Alkalmazási feltétel
+
+```{r out.width='40%'}
+# A reziduumok normalitásának tesztelése
+d.lm <- lm(cff~age, data=d)
+shapiro.test(residuals(d.lm))
+plot(d.lm, which = 2)
+```
+
+## Kiugró értékek
+
+```{r out.width='70%'}
+library(car)
+car::outlierTest(d.lm)
+
+d$pontszin <- 1
+d$pontszin[6] <- 2
+d$pontszin <- factor(d$pontszin)
+
+ggplot(data=d, aes(x=age, y=cff, col=pontszin)) + 
+  geom_point() + geom_smooth(method = "lm", se = T)  + theme_bw() 
+```
+
+## Szöveges értékelés
+
+Az egyszerű lineáris regresszió megmutatta, hogy a CFF függ az életkortól ($t(18)=-5.30; p<0,001$), a regressziós egyenes egyenlete pedig $CFF= 44.212 - 0,285 \times age$. Az életkorban történő 1 év növekedés a CFF értékét -0,285-del módosítja (csökkenti). A 20, 30, 40 és 50 éves korhoz tartozó becsült CFF frekvenciák rendre: 38,5; 35,7, 32,8; 30,0. A reziduumok normalitása teljesül, és kiugró értékek sem módosítják jelentős mértékben a kapott eredményeket.   
+
+## Alternatívák
+
+```{r out.width='40%'}
+library(jtools)
+d.lm <- lm(cff~age, data=d)
+jtools::summ(d.lm)
+```
+
+
+
+
+```{r out.width='40%'}
+library(jmv)
+jmv::linReg(
+    data = d,
+    dep = cff,
+    covs = age,
+    blocks = list(
+        list(
+            "age")),
+    refLevels = list(),
+    modelTest = TRUE,
+    norm = TRUE,
+    qqPlot = TRUE,
+    resPlots = TRUE,
+    durbin = TRUE,
+    collin = TRUE,
+    cooks = TRUE)
+```
+
+
+# Irodalom
+

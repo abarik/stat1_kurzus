@@ -1,0 +1,91 @@
+---
+title: "F-próba"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Futócipők súlya
+
+> A férfi és női futócipők súlyának szórását szeretnénk összehasonlítani. Az adatokat a `futocipok_sulya.xlsx` tartalmazza. Támagatják az adatok a férfiak futócipő súlyának nagyobb variabilitását?
+
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/futocipok_sulya.xlsx")
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+d$nem <- factor(d$nem)
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describeBy(x = d$suly, group = d$nem, mat=T, digits = 2)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+by(d$suly, d$nem, shapiro.test)# normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+var.test(suly~nem, data=d)
+```
+ 
+
+## Szöveges értékelés
+
+Az F-próba alapján azt mondhatjuk, hogy férfia futócipők súlyának variabilitása szignifikánsan nagyobb, mint a nőké ($F(14, 14)=5,32; p=0,004$).
+ 
+# Irodalom
+

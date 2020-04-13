@@ -1,0 +1,134 @@
+---
+title: "Kétmintás t-próba és Welch-féle d-próba"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Mnemotechnika hatása
+
+> Egy kísérletben a mnemotechnika hatását vizsgálták. Az egyik csoportban (mnemonic) egy szólista megtanulása előtt ismertettek egy mnemotechnikát, amelytől a tanultak felidézésének javulását várják. A másik csoportban (kontroll), nem adtak támpontot a szólista hatékonyabb megtanulásához. A tanulás után mindkét csoportban lejegyezték, hogy a 20 szavas listából a kísérleti személyek hány szóra emlékeznek. Az adatok a `mnemonic.sav` állományban találhatók. Vizsgáljuk meg, hogy a mnemotechnika valóban növeli-e a helyesen felidézett szavak számát.  
+Forrás: @Brace2016, 112. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/mnemonic.sav")
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+d$group <- factor(d$group)
+levels(d$group) <- c("mnemonic", "kontroll")
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describeBy(x = d$score, group = d$group, mat=T, digits = 2)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(data=d, aes(x=score, y=stat(density))) + 
+  geom_histogram(binwidth = 1, fill="white", col="blue", boundary=20) +
+  geom_density(col="red", size=1) + 
+  facet_wrap(~group, nrow=2) + 
+  theme_bw()
+
+p2 <- ggplot(data=d, aes(x=group, y=score)) + 
+  stat_summary(fun.y=mean, geom="point", size=2) + 
+  stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=0.1) +
+  theme_bw() + scale_y_continuous(name="Szavak száma", limits = c(0,20)) + 
+  scale_x_discrete(name="", labels=c("Mnemotechnika", "Kontroll"))
+
+p3 <- ggplot(data=d, aes(x=group, y=score)) + 
+        stat_summary(fun.y=mean, geom="bar", fill="#d8deda", colour="black") + 
+        stat_summary(fun.data=mean_cl_normal, geom="pointrange") +
+        theme_bw() + scale_y_continuous(name="Szavak száma", limits = c(0,20)) + 
+        scale_x_discrete(name="", labels=c("Mnemotechnika", "Kontroll"))
+
+grid.arrange(p1, p2, p3, nrow=1)
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+var.test(score~group, data=d)  # F-próba
+by(data = d$score, INDICES = d$group, shapiro.test)  # normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+t.test(score~group, data=d, var.equal=T)  # kétmintás t-próba
+t.test(score~group, data=d, var.equal=F)  # Welch-féle d-próba
+
+library(lsr)
+cohensD(score~group, data=d)  # hatásnagyság
+# 0,2 – < 0,5: kicsi; 0,5 – < 0,8: közepes; >= 0,8: nagy
+```
+ 
+
+## Szöveges értékelés
+
+Mnemotechnika hatására több szóra emlékeztek a vizsgálati személyek $M=17,73$, míg a kontrollcsoportban az átlag $M=14,1$ volt. A kétmintás-t próba igazolta, hogy a mnemotechnika hatása szignifikáns, és a hatásnagyság elegendően nagy ($t(19)=2,58; p=0,018; d=1,13$).
+
+ 
+## Alternatívák
+
+```{r out.width='40%'}
+
+library(lsr)
+independentSamplesTTest(score~group, data=d, var.equal = T)
+independentSamplesTTest(score~group, data=d, var.equal = F)
+
+library(jmv)
+ttestIS(data = d, vars = "score", group = "group", norm = T, effectSize = T, desc = T, welchs = T, qq = T, meanDiff = T, eqv = T, ci = T, plots = T)
+```
+
+
+# Irodalom
+

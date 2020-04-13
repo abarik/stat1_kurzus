@@ -1,0 +1,98 @@
+---
+title: "Többmintás variancia"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Facebook-ismerősök és a vonzerő
+
+Az egyes Facebook-felhasználói profilok egyik jellemzője a Facebook-ismerősök száma. Az egyetemi hallgatók körében a Facebook-ismerősök átlagos száma körülbelül 650. Egy kísérletet végeztünk a Facebook-ismerősök száma és a felhasználó észlelt társadalmi vonzereje közötti kapcsolat vizsgálatára. Összesen 134 hasonló Facebook-profillal rendelkező hallgató vett részt a vizsgálatban, egyetlen lényeges különbség közöttük az ismerősök száma volt, amely a következő értékeket veszi fel az adatbázisban: 102, 302, 502, 702 és 902. A résztvevőket felkérték egy kérdőív kitöltésére, amelyben a felhasználó fizikai és társadalmi vonzerejéről kérdezték. Vizsgáljuk meg, hogy a Facebook-ismerősök számának megfelelő öt csoportban a vonzerő szórásai azonosnak tekinthetők-e.
+
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/ismeros_vonzero.xlsx")
+```
+
+## Előkészítés
+
+```{r}
+d$ismerosok <- factor(d$ismerosok)
+library(tibble)
+glimpse(d)
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describeBy(x = d$pontszam, group = d$ismerosok, mat=T, digits = 2)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+# a Bartlett-próbához szükséges
+by(d$pontszam, d$ismerosok, shapiro.test)# normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+# Levene-teszt
+library(DescTools)
+LeveneTest(pontszam~ismerosok, data=d, center="mean")
+
+# Barlett-teszt
+bartlett.test(pontszam~ismerosok, data=d)
+```
+ 
+
+## Szöveges értékelés
+
+A szórások egyezőségének vizsgálatára végrehajtott Bartlett-próba alapján azt mondhatjuk, hogy nincs elegendő bizonyítékunk arra, hogy a szórások azonosságát állító hipotézist visszautasítsuk, vagyis a továbbiakban a szórások egyezőségét tételezzük fel ($\chi^2(4)=8,81; p=0,066$, a próba végrehatásához szükséges normalitási feltétel teljesült: Shapiro-Wilk próbával $p\ge0,099$ mind az 5 esetben). 
+
+
+# Irodalom
+

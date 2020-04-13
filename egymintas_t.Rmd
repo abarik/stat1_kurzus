@@ -1,0 +1,107 @@
+---
+title: "Egymintás t-próba"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Nyolcadikosok memóriája.
+
+> Egy pedagógus észrevette, hogy a a nyolcadikos diákjai feltünően feledékenyek. Rendszeresen otthon hagyják tornafelszerelésüket, elfelejtkeznek a tízórairól és a házi feladatok elkészítéséről. A pedagógus arra gyanakszik, hogy a diákok hosszú távú memória gyengülése lehet a jelenség hátterében, ezért felvesz velük egy tesztet, amelynek a norma szerinti átlagos értéke erre a korosztályra 75%. Az adatokat a `memoria.xlsx` adatállományban találjuk. Vizsgáljuk meg, hogy a nyolcadikos diákok feledékenységét valóban a hosszú távú memóriájuk romlása okozza.  
+Forrás: @Brace2016, 109. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/memoria.xlsx")
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describe(x = d$memoria)
+```
+
+## Leíró statisztika, ábra
+
+```{r}
+
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+shapiro.test(x = d$memoria)  # normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+t.test(x = d$memoria, mu = 75)   # egymintás t-próba
+
+library(lsr)
+cohensD(x = d$memoria, mu = 75)  # hatásnagyság
+# 0,2 – < 0,5: kicsi; 0,5 – < 0,8: közepes; >= 0,8: nagy
+```
+ 
+
+## Szöveges értékelés
+
+Az egymintás t-próba eredménye alapján azt mondhatjuk, elegendő bizonyítékunk van arra, hogy a hosszú távú memória szignifikánsan gyengébb a nyolcadikosok körében: $M=67,9\%, SD=5,07$, $t(19)=-6,27, p<0,001, d=1,4$.
+ 
+## Alternatívák
+
+```{r out.width='50%'}
+library(lsr)
+oneSampleTTest(x = d$memoria, mu = 75)
+
+library(jmv)
+ttestOneS(data = d, vars = "memoria", testValue = 75, norm = T, effectSize = T, desc = T)
+```
+
+
+# Irodalom
+

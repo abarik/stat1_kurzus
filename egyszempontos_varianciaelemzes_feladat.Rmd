@@ -59,6 +59,21 @@ levels(drog$group) <- c("ecstacy", "kontroll", "kannabisz")
 ```
 
 
+```{r}
+library(psych)
+describeBy(x = drog$dv, group = drog$group, mat=T, digits = 2)
+```
+
+
+```{r}
+d.aov <- aov(dv~group, data = drog) # egyszempontos varianciaelemzés
+summary(d.aov)
+
+pairwise.t.test(x = drog$dv, g = drog$group, p.adjust.method = "bonf", pool.sd = T) # egyenlő varianciák
+
+```
+
+
 
 # Irodalom
 

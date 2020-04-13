@@ -1,0 +1,181 @@
+---
+title: "Egyszempontos összetartozó mintás varianciaelemzés"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Stroop-hatás.
+
+> A Stroop-hatást változatos kísérleti elrendezésekben lehet vizsgálni. Jelen vizsgálatban egyetemi hallgatóknak 3 szólistát mutattak, és az volt a feladatuk, hogy a listán látható szavak színét megállapítsák. Az első szólistán (inkongruens eset) olyan szavak szerepeltek, amelyeknek erős kapcsolata van színekkel (fű, szén, vér, ég /grass, coal, blood, sky/). Ezek a szavak háromszor ismétlődtek az első listán, de olyan színnel voltak nyomtatva, amelyek nem illettek az adott szóhoz (azaz például a fű feketével, pirossal és kékkel volt nyomtatva). A második listán a négy szó a saját színével nyomtatva szerepelt (például a fű zöld színnel), és minden szó háromszor szerepelt a listán (kongruens eset). A harmadik listán (semleges eset) négy olyan új szó szerepelt, amelyeknek semmilyen különösebb kapcsolata nincs a színekkel. A fenti 4 színből 3 véletlenszerűen választott szín felhasználásával kerültek a listára semleges szavak (pl. az asztal fekete színnel). A vizsgálatban a függő változó a másodpercekben mért eltelt idő volt, amely alatt a lista 12 szavának a színét a vizsgálati személy megnevezte. Minden vizsgálati személy mindhárom szólistával találkozott. Az adatokat a `stroop.sav` adatállomány tartalmazza. Vizsgáljuk meg, hogy a lista típusának van-e hatása a színek megnevezése során eltelt időre.  
+Forrás: @Brace2016, 221. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/stroop.sav")
+dim(d)
+names(d)
+
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+# id oszlop hozzáadása
+d$id <- factor(1:10)
+
+# hosszú forma előállítása
+library(tidyverse)
+d.long <- d %>% pivot_longer(cols = 1:3, names_to="tipus", values_to = "ido")
+
+# faktorrá alakítás
+d.long$tipus <- factor(d.long$tipus, levels = c("INCONG", "NEUTRAL", "CONG"))
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+psych::describe(d)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+p1 <- ggplot(data=d.long, aes(x=tipus, y=ido)) + geom_boxplot()
+p2 <- ggplot(data=d.long, aes(x=tipus, y=ido)) + geom_boxplot() + geom_jitter(height = 0, width = 0.2)
+p3 <- ggplot(data=d.long, aes(x=tipus, y=ido)) + 
+        stat_summary(fun.y=mean, geom="bar", fill="white", colour="black") + 
+        stat_summary(fun.data=mean_cl_normal, geom="pointrange")
+grid.arrange(p1, p2, p3, nrow=1)
+```
+
+
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(data = d.long, aes(x = ido, fill=tipus)) + geom_density(alpha=0.5) + theme_bw() + theme(legend.position = "top")
+
+p2 <- ggplot(data = d.long, aes(x = tipus, y = ido)) + 
+    stat_summary(fun.y = mean, geom = "point", size = 2) +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.1) + theme_bw()
+
+
+p3 <- ggplot(data = d.long, aes(x = tipus, y = ido)) + 
+    stat_summary(fun.y = mean, geom = "point", size = 2) +
+    stat_summary(fun.y = mean, geom = "line", group=1) + 
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.1) + theme_bw()
+
+grid.arrange(p1, p2, p3, nrow = 1)
+```
+
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+apply(d[1:3], 2, shapiro.test) # normalitásvizsgálat
+
+shapiro.test(d$INCONG)
+shapiro.test(d$CONG)
+shapiro.test(d$NEUTRAL)
+
+by(d.long$ido, d.long$tipus, shapiro.test)
+
+
+# A szórások egyezőségének vizsgálatának itt a szfericitás vizsgálata felel meg, amely az összes mintapár-különbség szórásának egyezőségét jelenti. A lenti outputban a szignifikáns Mauchly-próba sértené a szfericitási feltételt. Amennyiben a szfericitás sérül, akkor a Greenhouse-Geisser (GG) p értéke alapján hozzuk meg a döntésünket (kisebb mintaelemszám esetén a Huynh–Feldt /HF/ p értéke alapján.) A közölt epszilon értékek (GGe, HFe), annál kisebbek, minél inkább sérül a szferictás. 
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+library(ez)
+d.aov <- ezANOVA(data = d.long, dv = .(ido), within = .(tipus), wid = .(id))
+d.aov
+
+# utóvizsgálat
+pairwise.t.test(x = d.long$ido, g = d.long$tipus, p.adjust.method = "bonf", paired = T)
+```
+ 
+
+## Szöveges értékelés
+
+Az egyszempontos összetartozó mintás varianciaelemzés eredménye alapján azt mondhatjuk, elegendő bizonyítékunk van arra, hogy a szólista szignifikáns hatással van a szín felismerésére vonatkozó időre $F(2,18)=68,74;p<0,001; \eta^2_G=0,80$). Az utóvizsgálat eredménye alapján mindhárom csoport szignifikánsan eltér egymástól ($p\leq0,002$). 
+
+
+## Alternatívák
+
+```{r out.width='70%'}
+library(jmv)
+anovaRM(data = d,
+    rm = list(
+        list(
+            label="Szolista tipusa",
+            levels=c(
+                "inkongruens",
+                "kongruens",
+                "semleges"))),
+    rmCells = list(
+        list(
+            measure="INCONG",
+            cell="inkongruens"),
+        list(
+            measure="CONG",
+            cell="kongruens"),
+        list(
+            measure="NEUTRAL",
+            cell="semleges")),
+    effectSize = c("ges"),
+    rmTerms = ~ `Szolista tipusa`,
+    spherTests = TRUE,
+    spherCorr = c("none", "GG"),
+    postHoc = list(
+        "Szolista tipusa"),
+    postHocCorr = c("bonf"),
+    emmTables = TRUE,
+    emmPlotData = TRUE)
+```
+
+
+# Irodalom
+

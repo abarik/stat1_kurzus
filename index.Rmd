@@ -1,0 +1,62 @@
+---
+title: "Pszichológiai statisztika 1."
+subtitle: "Példák próbák végrehajtására"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+# Tartalomjegyzék
+
+* [Egymintás t-póba](egymintas_t.html){target="_blank"}
+* [Páros t-próba](paros_t_proba.html){target="_blank"}
+* [Kétmintás t-próba és Welch-féle d-próba](ketmintas_t_es_Welch_fele_d.html){target="_blank"}
+* [Egyszempontos varianciaelemzés](egyszempontos_varianciaelemzes.html){target="_blank"}
+* [Egyszempontos összetartozó mintás varianciaelemzés](egyszempontos_osszetartozomintas_varianciaelemzes.html){target="_blank"}
+* [Kétszempontos varianciaelemzés](ketszempontos_varianciaelemzes.html){target="_blank"}
+* [Korrelációszámítás](korrelacioszamitas.html){target="_blank"}
+* [Regressziószámítás](regresszioszamitas.html){target="_blank"}
+
+
+* [Egymintás khí-négyzet próba a varianciára](egymintas_variancia.html){target="_blank"}
+* [F-próba](ketmintas_variancia.html){target="_blank"}
+* [Többmintás variancia](tobbmintas_variancia.html){target="_blank"}
+
+
+
+
+
+
+
+
+
+
+

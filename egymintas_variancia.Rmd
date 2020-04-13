@@ -1,0 +1,91 @@
+---
+title: "Egymintás khí-négyzet próba a varianciára"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Vizsgaeredmények
+
+> Egy statisztika tanár a kurzusain többnyire 100 varianciával rendelkező dolgozatokat íratott. Úgy gondolja, hogy a mostani csoportjaiban a variancia mértéke megnőtt. Véletlenszerűen kiválasztott 15 hallgatót, és adatbázisba rögzítette a vizsgaeredményeket. Alá tudjuk támasztani, hogy a variancia 100 fölé nőtt? Az adatokat a `vizsga_eredmenyek.xlsx` tartalmazza.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/vizsga_eredmenyek.xlsx")
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describe(d)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+shapiro.test(d$vizsga)# normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+library(TeachingDemos)
+sigma.test(x = d$vizsga, sigmasq = 100)
+```
+ 
+
+## Szöveges értékelés
+
+A variancia vizsgálatára használt khí-négyzet próba alapján azt mondhatjuk, hogy nincs elegendő bizonyítékunk, hogy a vizsgapontszámok varianciája 100 tól eltérne ($\chi^2(14)=25,73; p=0,056$). 
+
+ 
+# Irodalom
+

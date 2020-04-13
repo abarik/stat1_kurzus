@@ -1,0 +1,136 @@
+---
+title: "Páros t-próba"
+date: "`r Sys.Date()`"
+bibliography: [irodalom.bib]
+biblio-style: apalike
+link-citations: no
+output:
+  rmdformats::readthedown:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+	             cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               comment = "#>",
+               collapse = TRUE,
+               fig.show = "hold",
+               dpi = 300)               
+opts_knit$set(width=75)
+
+options(scipen = 8)
+```
+
+
+
+# Példa. Állatok mérete
+
+> Egy kísérletben azt vizsgálták, hogy milyen gyorsasággal tudják a résztvevők megállapítani két állatról, hogy melyik a nagyobb. Két szituációval találkozott minden résztvevő. Az első esetben nagy különbség volt a két állat méretében (szúnyog-oroszlán), míg a másik esetben kis különbség volt (zebra-ló). A kutatók azt a kérdést vizsgálták, hogy vajon mentális képeket használunk-e az állatok összhasonlítása során, ekkor ugyanis eltérő reakcióidőket kellene tapasztalnunk a két szituációban, vagy valamilyen absztraktabb szinten történik az összehasonlítás, és ekkor az állatok relatív mértekülönbsége nem igazán befolyásolhatná a reakcióidőt. Az adatokat a `mentalis_kepek.sav` állományban rögzítettük. Vizsgáljuk meg, hogy van-e eltérés a két szituációban mért átlagos reakcióidő között.
+
+Forrás: @Brace2016, 120. o.
+
+## Beolvasás
+
+```{r}
+library(rio)
+d <- import(file = "adatok/mentalis_kepek.sav")
+library(tibble)
+glimpse(d)
+```
+
+## Előkészítés
+
+```{r}
+library(tidyr)
+d$id <- factor(1:16)
+d.long <- d %>% pivot_longer(cols = 1:2, names_to = "meretkulonbseg", values_to = "ido")
+```
+
+
+## Leíró statisztika, mutatók
+
+```{r}
+library(psych)
+describe(d)
+```
+
+## Leíró statisztika, ábra
+
+```{r fig.asp=0.35}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(data = d.long, aes(x = ido, fill=meretkulonbseg)) + geom_density(alpha=0.5) + theme_bw() + theme(legend.position = "top")
+
+p2 <- ggplot(data = d.long, aes(x = meretkulonbseg, y = ido)) + 
+    stat_summary(fun = mean, geom = "point", size = 2) +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.1) + theme_bw()
+
+
+p3 <- ggplot(data = d.long, aes(x = meretkulonbseg, y = ido)) + 
+    stat_summary(fun = mean, geom = "point", size = 2) +
+    stat_summary(fun = mean, geom = "line", group=1) + 
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.1) + theme_bw()
+
+grid.arrange(p1, p2, p3, nrow=1)
+```
+
+
+## Előfeltétel vizsgálata
+
+```{r}
+by(data = d.long$ido, INDICES = d.long$meretkulonbseg, shapiro.test)  # normalitásvizsgálat
+```
+
+
+
+## Próba végrehajtása
+
+```{r}
+t.test(ido~meretkulonbseg, data=d.long, paired=T)  # páros t-próba
+t.test(d$large, d$small, paired = T)  # páros t-próba
+
+library(lsr)
+cohensD(d$large, d$small, method="paired")  # hatásnagyság
+# 0,2 – < 0,5: kicsi; 0,5 – < 0,8: közepes; >= 0,8: nagy
+```
+ 
+
+## Szöveges értékelés
+
+A páris t- próba alapján azt mondhatjuk, hogy az állatok kis relatív méretkülönbsége szignifikánsan növeli a reakcióidő nagyságát ($t(15)=-4,46; p<0,001; d=1,11; M_{small}=1462 ms; M_{large}=1157 ms$).
+
+ 
+## Alternatívák
+
+```{r out.width='40%'}
+library(jmv)
+jmv::ttestPS(
+    data = d,
+    pairs = list(
+        list(
+            i1="large",
+            i2="small")),
+    norm = TRUE,
+    qq = TRUE,
+    meanDiff = TRUE,
+    effectSize = TRUE,
+    ci = TRUE,
+    desc = TRUE,
+    plots = TRUE)
+```
+
+
+# Irodalom
+
