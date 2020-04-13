@@ -43,6 +43,7 @@ Forrás: @Brace2016, 198-199. o.
 
 ```{r}
 library(rio)
+#install.packages("rio")
 d <- import(file = "adatok/kitakaras_emlekezet.sav")
 dim(d)
 names(d)
